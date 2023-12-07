@@ -292,6 +292,10 @@ void media_leituraAD_Corrente(void)
                               
                 ligaDesliga = false;             
                 tempoLigado = 0;
+                
+                PHASE1 = 0x1F40;
+                PHASE2 = 0x1F40;
+                PHASE3 = 0x1F40;
 
                 if(SelecaoFreq == 45)
                 {
@@ -305,6 +309,11 @@ void media_leituraAD_Corrente(void)
                 {
                   App_inversor_Frequencia_75(0);  
                 } 
+                    
+                PHASE1 = 0x1F40;
+                PHASE2 = 0x1F40;
+                PHASE3 = 0x1F40;
+                
                 StartStop = false;    
                 setDesligaClearPWM();
                 PWM_DutyCycleSet(PWM_GENERATOR_1, 0);
@@ -790,48 +799,48 @@ void App_invensor_Controller(void) {
         
         //======================================
 
-//        //CTA
-//        if (CTA_GetValue() == 0) {
-//            ligadoEmergencia = true;
-//            delayEmergencia = 0;
-//            ligaDesliga = false;
-//            contAnima++;
-//            if (contAnima >= 3) 
-//            {
-//                contAnima = 0;
-//                if(animaEmegercia == 1)
-//                {
-//                    animaEmegercia = 0;
-//                }
-//                else
-//                {
-//                   animaEmegercia = 1; 
-//                }                
-//            }
-//            
-//            if (animaEmegercia == 1) 
-//            {
-//                display_escreve(0);
-//                display_Run();
-//                LD1_SetHigh();
-//                
-//            } 
-//            else 
-//            {
-//                display_escreve(100);
-//                display_Run();
-//                LD1_SetLow();
-//            }
-//        }
-//        else{
-//            ligadoEmergencia = false;  
-//        }
-//       //=============================== 
+        //CTA
+        if (CTA_GetValue() == 1) {
+            ligadoEmergencia = true;
+            delayEmergencia = 0;
+            ligaDesliga = false;
+            contAnima++;
+            if (contAnima >= 3) 
+            {
+                contAnima = 0;
+                if(animaEmegercia == 1)
+                {
+                    animaEmegercia = 0;
+                }
+                else
+                {
+                   animaEmegercia = 1; 
+                }                
+            }
+            
+            if (animaEmegercia == 1) 
+            {
+                display_escreve(0);
+                display_Run();
+                LD1_SetHigh();
+                
+            } 
+            else 
+            {
+                display_escreve(100);
+                display_Run();
+                LD1_SetLow();
+            }
+        }
+        else{
+            ligadoEmergencia = false;  
+        }
+       //=============================== 
 
-//        if (gravarCicloOK == true) {
-//            gravarCicloOK = false;
-//            App_Inversor_GravaMemoria();
-//        }
+        if (gravarCicloOK == true) {
+            gravarCicloOK = false;
+            App_Inversor_GravaMemoria();
+        }
 
         if (ligaDesliga){ LD1_Toggle();}
            // LD1_Toggle();
@@ -884,8 +893,9 @@ void App_inversor_Frequencia_75(uint8_t state) {
     
     static uint16_t checkValor = 0;
     static uint16_t contSubida = 0;
-    static uint8_t incdec = 0;     
+    static uint8_t incdec = 10;     
     static uint16_t trocafreq = 0;
+    static uint16_t voltaFase = 0x1F40;
 
     tick = SRV_TIMER_GetTick();
     if((uint32_t)(tick - tickLast) >= 1 || tick == 0)
@@ -898,20 +908,40 @@ void App_inversor_Frequencia_75(uint8_t state) {
             
             if (ligado == false)
             {   
-                PTCON2 = 0x00; // 16k 
-                 if(incdec < 45){
-                    contSubida++;
-                    if(contSubida >= 25) {
-                      contSubida = 0;
-                      incdec++; 
+               // configurarFrequenciaTimer2(16000);
+                
+                ////    // PCLKDIV 4; 
+                ////    PTCON2 = 0x02; //4k
+                //    
+                //    // PCLKDIV 2; 
+                //    PTCON2 = 0x01; // 8k  
+                ////    
+                ////    // PCLKDIV 1; 
+                PTCON2 = 0x00; // 16k  
+                
+                if(incdec < 30){
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
                     }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;                    
                 }
                 else{
-                    contSubida++;
-                    if(contSubida >= 75) {
-                      contSubida = 0;
-                      incdec++; 
-                    } 
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                
+                contSubida++;
+                if(contSubida >= 85) {
+                  contSubida = 0;
+                  incdec++; 
                 }
                 
                 valorHz = (uint16_t)(gerar_frequencia(incdec));                
@@ -922,9 +952,29 @@ void App_inversor_Frequencia_75(uint8_t state) {
                   fazendoRampa = false;
                   IncFreq = (uint16_t)(gerar_frequencia(incdec));
                   valorHz = IncFreq;                 
-                }                            
+                }                              
             }
             else{
+                
+                if(incdec < 30){
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;                    
+                }
+                else{
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                
               valorHz = (uint16_t)(gerar_frequencia(75));
               fazendoRampa = false;         
             }   
@@ -932,6 +982,25 @@ void App_inversor_Frequencia_75(uint8_t state) {
         } 
         else if (state == 0) 
         {
+            
+                if(incdec < 30){
+                    voltaFase = voltaFase + 500;
+                    if(voltaFase >= 0x1F40){
+                        voltaFase = 0x1F40;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                else{ 
+                    voltaFase = voltaFase + 500;
+                    if(voltaFase >= 0x1F40){
+                        voltaFase = 0x1F40;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
 
             if (++contSubida >= 25) 
             {
@@ -942,7 +1011,8 @@ void App_inversor_Frequencia_75(uint8_t state) {
             
             if (incdec <= 10) 
             {
-                incdec = 0;
+                voltaFase = 0x1F40;
+                incdec = 10;
                 trocafreq = 0;              
                 contSubida = 0;
                 valorHz = 3050;
@@ -977,13 +1047,14 @@ void App_inversor_Frequencia_75(uint8_t state) {
 
 void App_inversor_Frequencia_60(uint8_t state) {
 
-   static uint32_t tick = 0;
+    static uint32_t tick = 0;
     static uint32_t tickLast = 0;
     
     static uint16_t checkValor = 0;
     static uint16_t contSubida = 0;
-    static uint8_t incdec = 0;     
+    static uint8_t incdec = 10;     
     static uint16_t trocafreq = 0;
+    static uint16_t voltaFase = 0x1F40;
 
     tick = SRV_TIMER_GetTick();
     if((uint32_t)(tick - tickLast) >= 1 || tick == 0)
@@ -996,21 +1067,40 @@ void App_inversor_Frequencia_60(uint8_t state) {
             
             if (ligado == false)
             {   
-                PTCON2 = 0x00; // 16k 
+               // configurarFrequenciaTimer2(16000);
                 
-                if(incdec < 45){
-                    contSubida++;
-                    if(contSubida >= 25) {
-                      contSubida = 0;
-                      incdec++; 
+                ////    // PCLKDIV 4; 
+                ////    PTCON2 = 0x02; //4k
+                //    
+                //    // PCLKDIV 2; 
+                //    PTCON2 = 0x01; // 8k  
+                ////    
+                ////    // PCLKDIV 1; 
+                PTCON2 = 0x00; // 16k  
+                
+                if(incdec < 30){
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
                     }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;                    
                 }
                 else{
-                    contSubida++;
-                    if(contSubida >= 75) {
-                      contSubida = 0;
-                      incdec++; 
-                    } 
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                
+                contSubida++;
+                if(contSubida >= 85) {
+                  contSubida = 0;
+                  incdec++; 
                 }
                 
                 valorHz = (uint16_t)(gerar_frequencia(incdec));                
@@ -1021,9 +1111,29 @@ void App_inversor_Frequencia_60(uint8_t state) {
                   fazendoRampa = false;
                   IncFreq = (uint16_t)(gerar_frequencia(incdec));
                   valorHz = IncFreq;                 
-                }  
+                }                              
             }
             else{
+                
+                if(incdec < 30){
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;                    
+                }
+                else{
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                
               valorHz = (uint16_t)(gerar_frequencia(60));
               fazendoRampa = false;         
             }   
@@ -1031,6 +1141,25 @@ void App_inversor_Frequencia_60(uint8_t state) {
         } 
         else if (state == 0) 
         {
+            
+                if(incdec < 30){
+                    voltaFase = voltaFase + 500;
+                    if(voltaFase >= 0x1F40){
+                        voltaFase = 0x1F40;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                else{ 
+                    voltaFase = voltaFase + 500;
+                    if(voltaFase >= 0x1F40){
+                        voltaFase = 0x1F40;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
 
             if (++contSubida >= 25) 
             {
@@ -1041,7 +1170,8 @@ void App_inversor_Frequencia_60(uint8_t state) {
             
             if (incdec <= 10) 
             {
-                incdec = 0;
+                voltaFase = 0x1F40;
+                incdec = 10;
                 trocafreq = 0;              
                 contSubida = 0;
                 valorHz = 3050;
@@ -1080,9 +1210,9 @@ void App_inversor_Frequencia_45(uint8_t state) {
     
     static uint16_t checkValor = 0;
     static uint16_t contSubida = 0;
-    static uint8_t incdec = 0;     
+    static uint8_t incdec = 10;     
     static uint16_t trocafreq = 0;
-
+    static uint16_t voltaFase = 0x1F40;
 
     tick = SRV_TIMER_GetTick();
     if((uint32_t)(tick - tickLast) >= 1 || tick == 0)
@@ -1106,8 +1236,27 @@ void App_inversor_Frequencia_45(uint8_t state) {
                 ////    // PCLKDIV 1; 
                 PTCON2 = 0x00; // 16k  
                 
+                if(incdec < 30){
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;                    
+                }
+                else{
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                
                 contSubida++;
-                if(contSubida >= 25) {
+                if(contSubida >= 85) {
                   contSubida = 0;
                   incdec++; 
                 }
@@ -1123,6 +1272,26 @@ void App_inversor_Frequencia_45(uint8_t state) {
                 }                              
             }
             else{
+                
+                if(incdec < 30){
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;                    
+                }
+                else{
+                    voltaFase--;
+                    if(voltaFase <= 0xFA0){
+                        voltaFase = 0xFA0;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                
               valorHz = (uint16_t)(gerar_frequencia(45));
               fazendoRampa = false;         
             }   
@@ -1130,6 +1299,25 @@ void App_inversor_Frequencia_45(uint8_t state) {
         } 
         else if (state == 0) 
         {
+            
+                if(incdec < 30){
+                    voltaFase = voltaFase + 500;
+                    if(voltaFase >= 0x1F40){
+                        voltaFase = 0x1F40;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
+                else{ 
+                    voltaFase = voltaFase + 500;
+                    if(voltaFase >= 0x1F40){
+                        voltaFase = 0x1F40;
+                    }
+                    PHASE1 = voltaFase;
+                    PHASE2 = voltaFase;
+                    PHASE3 = voltaFase;
+                }
 
             if (++contSubida >= 25) 
             {
@@ -1140,7 +1328,8 @@ void App_inversor_Frequencia_45(uint8_t state) {
             
             if (incdec <= 10) 
             {
-                incdec = 0;
+                voltaFase = 0x1F40;
+                incdec = 10;
                 trocafreq = 0;              
                 contSubida = 0;
                 valorHz = 3050;
