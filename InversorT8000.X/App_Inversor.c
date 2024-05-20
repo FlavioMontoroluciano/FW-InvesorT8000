@@ -370,6 +370,8 @@ void App_Inversor_LerMemoria(void) {
     read_data[3] = FLASH_ReadWord24(flash_storage_address + 6U);
 }
 
+uint16_t timeFirst = 0;
+
 void App_Inversor_Init(void) {
    Time_T1 = 3;    
    Time_T2 = 3;    
@@ -408,6 +410,12 @@ void App_Inversor_Init(void) {
      setDesligaClearPWM();
      
      CTA_SetDigitalInput();
+     
+     while(timeFirst < 150){ 
+     App_inversor_Frequencia_45(1); 
+     timeFirst++;
+    }
+    App_inversor_Frequencia_45(0); 
     
 }
 
